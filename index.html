@@ -359,6 +359,7 @@ body[data-theme="light"] {
     setStatus('syncing…');
     try {
       const res = await fetch(apiUrl() + '?ref=' + encodeURIComponent(config.branch || 'main'), {
+        cache: 'no-store',
         headers: {
           'Authorization': 'Bearer ' + config.token,
           'Accept': 'application/vnd.github+json'
