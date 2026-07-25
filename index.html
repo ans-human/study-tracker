@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JVM · Kafka · AI Platform Engineering — Study Log</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  --ink: #0F1320;
+  --surface: #1A2036;
+  --surface-2: #212845;
+  --border: #2E3554;
+  --text: #EDEDF2;
+  --text-dim: #9297AE;
+  --amber: #E8A33D;
+  --amber-on-fill: #12162355;
+  --teal: #4FD1AE;
+  --danger: #E2685E;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  padding: 28px 20px 80px;
+  min-height: 100vh;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+body[data-theme="light"] {
+  --ink: #F6F4EF;
+  --surface: #FFFFFF;
+  --surface-2: #ECE9E1;
+  --border: #DDD8CC;
+  --text: #232019;
+  --text-dim: #746E5F;
+  --amber: #C97A2B;
+  --amber-on-fill: #FFFFFF;
+  --teal: #1E8F73;
+  --danger: #C2483D;
+}
+
+.jst-wrap { max-width: 760px; margin: 0 auto; }
+
+.jst-header { margin-bottom: 22px; position: relative; }
+.jst-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); margin: 0 0 8px; }
+.jst-title { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 22px; margin: 0 0 6px; line-height: 1.3; padding-right: 90px; }
+.jst-sub { color: var(--text-dim); font-size: 13.5px; margin: 0; line-height: 1.5; }
+
+.jst-header-buttons { position: absolute; top: 0; right: 0; display: flex; gap: 8px; align-items: center; }
+.jst-theme-toggle { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 6px; }
+.jst-theme-toggle button { border: none; background: none; color: var(--text-dim); width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.jst-theme-toggle button.active { background: var(--amber); color: var(--amber-on-fill); }
+.jst-gear-btn { border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.jst-gear-btn.needs-setup { border-color: var(--danger); color: var(--danger); }
+
+.jst-sync-bar { margin-top: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.jst-log-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; gap: 10px; }
+.jst-log-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+.jst-log-count { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--amber); font-weight: 600; white-space: nowrap; }
+.jst-segments { display: flex; gap: 3px; height: 14px; }
+.jst-seg { flex: 1; background: var(--surface-2); border-radius: 2px; transition: background 0.25s ease; }
+.jst-seg.filled { background: var(--amber); }
+
+.jst-setup-banner {
+  margin-top: 16px; background: var(--surface); border: 1px dashed var(--amber); border-radius: 10px;
+  padding: 14px 16px; font-size: 13px; color: var(--text-dim); line-height: 1.6; display: none;
+}
+.jst-setup-banner.show { display: block; }
+.jst-setup-banner button { margin-top: 8px; }
+
+.jst-module { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.jst-module-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; cursor: pointer; user-select: none; }
+.jst-num { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--teal); min-width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.jst-num.done { background: var(--amber); }
+.jst-head-text { flex: 1; min-width: 0; }
+.jst-module-title { font-size: 14.5px; font-weight: 600; margin: 0 0 3px; }
+.jst-module-months { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); }
+.jst-ring-wrap { position: relative; width: 38px; height: 38px; flex-shrink: 0; }
+.jst-ring-wrap svg { transform: rotate(-90deg); }
+.jst-ring-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); }
+.jst-chevron { color: var(--text-dim); transition: transform 0.2s ease; flex-shrink: 0; }
+.jst-module.open .jst-chevron { transform: rotate(180deg); }
+.jst-module-body { display: none; padding: 0 18px 18px; border-top: 1px solid var(--border); }
+.jst-module.open .jst-module-body { display: block; }
+.jst-objective { font-size: 13px; color: var(--text-dim); line-height: 1.55; padding: 14px 0 4px; border-bottom: 1px dashed var(--border); margin-bottom: 10px; }
+.jst-section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin: 14px 0 8px; }
+.jst-item { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; cursor: pointer; }
+.jst-check { margin-top: 2px; width: 17px; height: 17px; border-radius: 4px; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s ease, background 0.15s ease; }
+.jst-item.checked .jst-check { background: var(--amber); border-color: var(--amber); }
+.jst-check svg { opacity: 0; width: 11px; height: 11px; }
+.jst-item.checked .jst-check svg { opacity: 1; }
+.jst-item-text { font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.jst-item.checked .jst-item-text { color: var(--text-dim); text-decoration: line-through; text-decoration-color: var(--border); }
+
+.jst-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); flex-wrap: wrap; gap: 8px; }
+.jst-reset { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 7px 12px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; }
+.jst-reset:hover { border-color: var(--danger); color: var(--danger); }
+.jst-status { min-height: 14px; }
+.jst-status.error { color: var(--danger); }
+.jst-status.ok { color: var(--teal); }
+
+/* Settings modal */
+.jst-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 50; overflow-y: auto; }
+.jst-modal-backdrop.show { display: flex; }
+.jst-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; max-width: 460px; width: 100%; }
+.jst-modal h2 { font-family: 'IBM Plex Mono', monospace; font-size: 15px; margin: 0 0 6px; }
+.jst-modal p.desc { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin: 0 0 16px; }
+.jst-field { margin-bottom: 12px; }
+.jst-field label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 5px; letter-spacing: 0.04em; }
+.jst-field input {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 10px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;
+}
+.jst-field input:focus { outline: none; border-color: var(--teal); }
+.jst-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.jst-btn { flex: 1; padding: 10px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--text); }
+.jst-btn.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-on-fill); font-weight: 600; }
+.jst-help { font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.jst-help a { color: var(--teal); }
+</style>
+</head>
+<body data-theme="dark">
+  <div class="jst-wrap">
+    <div class="jst-header">
+      <div class="jst-header-buttons">
+        <div class="jst-theme-toggle" role="group" aria-label="Theme">
+          <button id="jst-theme-dark" class="active" title="Dark mode" aria-label="Dark mode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button id="jst-theme-light" title="Light mode" aria-label="Light mode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </button>
+        </div>
+        <button class="jst-gear-btn" id="jst-gear" title="Sync settings" aria-label="Sync settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+      <p class="jst-eyebrow">// 12-month study log</p>
+      <h1 class="jst-title">JVM · Kafka · AI Platform Engineering</h1>
+      <p class="jst-sub">Check off items as you go. Progress syncs to a JSON file in your GitHub repo, so it's the same on every device.</p>
+    </div>
+
+    <div class="jst-sync-bar">
+      <div class="jst-log-top">
+        <span class="jst-log-label">Committed offsets</span>
+        <span class="jst-log-count" id="jst-overall-count">0 / 0</span>
+      </div>
+      <div class="jst-segments" id="jst-segments"></div>
+    </div>
+
+    <div class="jst-setup-banner" id="jst-setup-banner">
+      <strong>Not connected yet.</strong> Your checkmarks are only saving to this browser right now. Tap the gear icon above to connect a GitHub repo so progress syncs across devices.
+    </div>
+
+    <div id="jst-modules"></div>
+
+    <div class="jst-footer">
+      <span class="jst-status" id="jst-status"></span>
+      <button class="jst-reset" id="jst-reset">reset all progress</button>
+    </div>
+  </div>
+
+  <div class="jst-modal-backdrop" id="jst-modal-backdrop">
+    <div class="jst-modal">
+      <h2>Sync settings</h2>
+      <p class="desc">Progress is stored as a JSON file in a GitHub repo you control, using a personal access token. The token is saved only in this browser's local storage — enter it again on each device you use.</p>
+      <div class="jst-field"><label for="jst-in-owner">GitHub username / org</label><input id="jst-in-owner" placeholder="e.g. jane-doe"></div>
+      <div class="jst-field"><label for="jst-in-repo">Repository name</label><input id="jst-in-repo" placeholder="e.g. study-tracker"></div>
+      <div class="jst-field"><label for="jst-in-branch">Branch</label><input id="jst-in-branch" placeholder="main" value="main"></div>
+      <div class="jst-field"><label for="jst-in-path">File path</label><input id="jst-in-path" placeholder="progress.json" value="progress.json"></div>
+      <div class="jst-field"><label for="jst-in-token">Personal access token</label><input id="jst-in-token" type="password" placeholder="github_pat_..."></div>
+      <div class="jst-modal-actions">
+        <button class="jst-btn" id="jst-modal-cancel">Cancel</button>
+        <button class="jst-btn primary" id="jst-modal-save">Save & sync</button>
+      </div>
+      <div class="jst-help">
+        Create a <strong>fine-grained</strong> token at github.com → Settings → Developer settings → Personal access tokens. Scope it to only this one repo, with <strong>Contents: Read and write</strong> permission — nothing else. The file doesn't need to exist yet; the first sync creates it.
+      </div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  const DATA = [
+    {
+      id: "m1", months: "Months 1–2",
+      title: "Advanced Concurrent JVM & Functional Abstractions",
+      objective: "Master modern Java concurrency utilities, thread safety constraints, and functional patterns across Kotlin and Scala to write scalable, non-blocking integrations.",
+      content: [
+        "Build async pipelines with CompletableFuture, ExecutorService, and Virtual Threads",
+        "Implement non-blocking data transformers with Kotlin coroutines / Scala functional patterns",
+        "Solve 60 medium-to-hard algorithm problems on platform structures (serialization, TTL eviction, graph traversal)"
+      ],
+      practice: [
+        "Implement an in-memory DB with concurrent CRUD, tag filtering, and thread-safe TTL eviction",
+        "Write a Kotlin functional mapper for an irregular nested ledger structure"
+      ]
+    },
+    {
+      id: "m2", months: "Months 3–4",
+      title: "Kafka Transactional Processing & Exactly-Once Semantics",
+      objective: "Eliminate duplicate message delivery and data corruption during enterprise application processing by configuring transactional topologies.",
+      content: [
+        "Study exactly-once semantics; configure processing.guarantee=exactly_once_v2",
+        "Implement the transactional lifecycle: initTransactions → beginTransaction → sendOffsetsToTransaction → commitTransaction",
+        "Set isolation.level=read_committed on consuming instances",
+        "Design idempotent storage patterns (atomic record + offset commit)"
+      ],
+      practice: [
+        "Draft a Java template for a transactional producer with consumer offset updates in one loop",
+        "Explain the state divergence risk if a service calls an external API before a Kafka transaction commits"
+      ]
+    },
+    {
+      id: "m3", months: "Months 5–6",
+      title: "Targeted AWS Cloud Infrastructure & Resilience",
+      objective: "Overcome cloud environment confidence limitations by building functional familiarity with foundational AWS integration, container hosting, and storage layers.",
+      content: [
+        "Study Amazon RDS managed MySQL patterns (Airbnb reference case)",
+        "Analyze ECS / EKS deployment mechanics for JVM microservices",
+        "Wire up API Gateway + Lambda, routing into SQS dead-letter queues",
+        "Hands-on: LocalStack + Kotlin app reading a mock stream into DynamoDB"
+      ],
+      practice: [
+        "Design a multi-region RDS architecture detailing failover during a localized outage",
+        "Diagram a high-throughput webhook payload's path from API Gateway into an SQS buffer"
+      ]
+    },
+    {
+      id: "m4", months: "Months 7–8",
+      title: "Enterprise Ingestion & Legacy Oracle Cloud Migrations",
+      objective: "Architect data ingestion pipelines capable of extracting ledger balances out of enterprise platforms like Oracle Cloud ERP into localized distributed architectures safely.",
+      content: [
+        "Segment legacy data domains; prioritize Tier 1 elements (vendor masters, chart of accounts, employee profiles)",
+        "Master Oracle's File-Based Data Import (FBDI) bulk templates",
+        "Deploy a staging database for validation, schema changes, and traffic throttling"
+      ],
+      practice: [
+        "Design a zero-downtime ledger migration using a Kafka streaming sync pipeline",
+        "Detail a validation checklist to reconcile balances after an FBDI load"
+      ]
+    },
+    {
+      id: "m5", months: "Months 9–10",
+      title: "AI Platform Engineering & Model Context Protocol (MCP) in Java",
+      objective: "Expose internal microservices and database engines as standardized, structured tools consumable by AI agents using the Model Context Protocol.",
+      content: [
+        "Study MCP architecture: bidirectional STDIO and Streamable HTTP (SSE) transport",
+        "Build Java MCP servers with the MCP Java SDK, Spring AI Boot starters, or Quarkus extensions",
+        "Connect clients via langchain4j-mcp or spring-ai-mcp to trigger remote tools",
+        "Study Airbnb's LLM test-migration case: ~3,500 legacy React test files migrated in 6 weeks"
+      ],
+      practice: [
+        "Write a Java MCP tool spec that parses unstructured invoice text into an internal record",
+        "Design circuit breakers to protect database layers from hallucinated agent tool calls"
+      ]
+    },
+    {
+      id: "m6", months: "Months 11–12",
+      title: "Integration System Design & High-Throughput Failure Modes",
+      objective: "Design fault-tolerant backend ecosystems that maintain total data consistency across volatile transaction loads.",
+      content: [
+        "Implement distributed tracing: trace IDs, logging, downstream exception fallbacks",
+        "Integrate circuit breakers, rate limiters, and exponential back-off retries",
+        "Practice partition-count sizing: throughput target ÷ single consumer throughput"
+      ],
+      practice: [
+        "Design an enterprise notification engine with strict transactional deduplication",
+        "Design an async reporting gateway that buffers peak load without exhausting connection pools"
+      ]
+    },
+    {
+      id: "m7", months: "Ongoing — Interview Prep",
+      title: "Core Values & Cross-Functional Engineering Alignment",
+      objective: "Structure past professional experience using the STAR framework to highlight technical ownership, operational maturity, and alignment with core culture values.",
+      content: [
+        "Draft 6 structured career stories against the key behavioral vectors",
+        "Cross-functional story: translating ambiguous stakeholder asks into deterministic specs",
+        "Delay-management story: protecting scope and quality under a jeopardized deadline",
+        "Incident story: ownership during a major integration outage, from discovery to remediation"
+      ],
+      practice: []
+    }
+  ];
+
+  const LS_CONFIG_KEY = 'jst-github-config';
+  const LS_LOCAL_PROGRESS_KEY = 'jst-local-progress-fallback';
+
+  const modulesEl = document.getElementById('jst-modules');
+  const segmentsEl = document.getElementById('jst-segments');
+  const overallCountEl = document.getElementById('jst-overall-count');
+  const statusEl = document.getElementById('jst-status');
+  const resetBtn = document.getElementById('jst-reset');
+  const gearBtn = document.getElementById('jst-gear');
+  const setupBanner = document.getElementById('jst-setup-banner');
+  const modalBackdrop = document.getElementById('jst-modal-backdrop');
+  const modalCancel = document.getElementById('jst-modal-cancel');
+  const modalSave = document.getElementById('jst-modal-save');
+  const darkBtn = document.getElementById('jst-theme-dark');
+  const lightBtn = document.getElementById('jst-theme-light');
+
+  let progress = {};
+  let theme = localStorage.getItem('jst-theme') || 'dark';
+  let config = null; // { owner, repo, branch, path, token }
+  let currentSha = null; // sha of the file on GitHub, needed to update it
+  let saveTimer = null;
+
+  let totalItems = 0;
+  DATA.forEach(m => { totalItems += m.content.length + m.practice.length; });
+
+  function loadConfig() {
+    try {
+      const raw = localStorage.getItem(LS_CONFIG_KEY);
+      if (raw) config = JSON.parse(raw);
+    } catch (e) { config = null; }
+  }
+
+  function saveConfig(c) {
+    config = c;
+    localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(c));
+  }
+
+  function isConfigured() {
+    return config && config.owner && config.repo && config.token;
+  }
+
+  function applyTheme() {
+    document.body.setAttribute('data-theme', theme);
+    darkBtn.classList.toggle('active', theme === 'dark');
+    lightBtn.classList.toggle('active', theme === 'light');
+    localStorage.setItem('jst-theme', theme);
+  }
+  darkBtn.addEventListener('click', () => { theme = 'dark'; applyTheme(); });
+  lightBtn.addEventListener('click', () => { theme = 'light'; applyTheme(); });
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = 'jst-status' + (kind ? ' ' + kind : '');
+  }
+
+  // --- Unicode-safe base64 helpers ---
+  function b64Encode(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1)));
+  }
+  function b64Decode(str) {
+    return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+  }
+
+  function apiUrl() {
+    return 'https://api.github.com/repos/' + config.owner + '/' + config.repo + '/contents/' + encodeURIComponent(config.path);
+  }
+
+  async function fetchFromGitHub() {
+    setStatus('syncing…');
+    try {
+      const res = await fetch(apiUrl() + '?ref=' + encodeURIComponent(config.branch || 'main'), {
+        headers: {
+          'Authorization': 'Bearer ' + config.token,
+          'Accept': 'application/vnd.github+json'
+        }
+      });
+      if (res.status === 404) {
+        // File doesn't exist yet — that's fine, treat as empty
+        currentSha = null;
+        setStatus('connected — no data yet', 'ok');
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(res.status + ': ' + body);
+      }
+      const json = await res.json();
+      currentSha = json.sha;
+      const decoded = b64Decode(json.content.replace(/\n/g, ''));
+      const parsed = JSON.parse(decoded);
+      progress = parsed.progress || {};
+      setStatus('synced', 'ok');
+    } catch (e) {
+      console.error(e);
+      setStatus('sync failed — check token & repo settings', 'error');
+    }
+  }
+
+  async function pushToGitHub() {
+    if (!isConfigured()) return;
+    setStatus('saving…');
+    try {
+      const payload = { progress: progress, updatedAt: new Date().toISOString() };
+      const body = {
+        message: 'Update study progress',
+        content: b64Encode(JSON.stringify(payload, null, 2)),
+        branch: config.branch || 'main'
+      };
+      if (currentSha) body.sha = currentSha;
+
+      const res = await fetch(apiUrl(), {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + config.token,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(res.status + ': ' + errBody);
+      }
+      const json = await res.json();
+      currentSha = json.content.sha;
+      setStatus('saved to GitHub', 'ok');
+      setTimeout(() => setStatus(''), 2000);
+    } catch (e) {
+      console.error(e);
+      setStatus('save failed — check token & repo settings', 'error');
+    }
+  }
+
+  function scheduleSave() {
+    // local fallback always, immediately
+    localStorage.setItem(LS_LOCAL_PROGRESS_KEY, JSON.stringify(progress));
+    if (!isConfigured()) {
+      setStatus('saved locally only — connect GitHub to sync', '');
+      return;
+    }
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushToGitHub, 900);
+  }
+
+  function checkIcon() {
+    return '<svg viewBox="0 0 24 24" fill="none" style="stroke:var(--amber-on-fill)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  }
+
+  function itemHtml(moduleId, kind, idx, text) {
+    const key = moduleId + ':' + kind + ':' + idx;
+    const checked = !!progress[key];
+    return '<div class="jst-item' + (checked ? ' checked' : '') + '" data-key="' + key + '">' +
+      '<div class="jst-check">' + checkIcon() + '</div>' +
+      '<div class="jst-item-text">' + text + '</div>' +
+      '</div>';
+  }
+
+  function moduleCounts(m) {
+    let done = 0, total = m.content.length + m.practice.length;
+    m.content.forEach((_, i) => { if (progress[m.id + ':content:' + i]) done++; });
+    m.practice.forEach((_, i) => { if (progress[m.id + ':practice:' + i]) done++; });
+    return { done, total };
+  }
+
+  function ringSvg(pct) {
+    const r = 16, c = 2 * Math.PI * r;
+    const offset = c - (pct / 100) * c;
+    const color = pct >= 100 ? 'var(--amber)' : 'var(--teal)';
+    return '<svg width="38" height="38" viewBox="0 0 38 38">' +
+      '<circle cx="19" cy="19" r="' + r + '" fill="none" stroke="var(--surface-2)" stroke-width="4"/>' +
+      '<circle cx="19" cy="19" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="4" ' +
+      'stroke-dasharray="' + c + '" stroke-dashoffset="' + offset + '" stroke-linecap="round"/>' +
+      '</svg>';
+  }
+
+  function render() {
+    modulesEl.innerHTML = '';
+    let overallDone = 0;
+
+    DATA.forEach((m, idx) => {
+      const { done, total } = moduleCounts(m);
+      overallDone += done;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      const isOpen = m._open;
+
+      const card = document.createElement('div');
+      card.className = 'jst-module' + (isOpen ? ' open' : '');
+      card.innerHTML =
+        '<div class="jst-module-head" data-toggle="' + m.id + '">' +
+          '<div class="jst-num' + (pct >= 100 ? ' done' : '') + '">' + (idx + 1) + '</div>' +
+          '<div class="jst-head-text">' +
+            '<p class="jst-module-title">' + m.title + '</p>' +
+            '<p class="jst-module-months">' + m.months + ' · ' + done + '/' + total + ' done</p>' +
+          '</div>' +
+          '<div class="jst-ring-wrap">' + ringSvg(pct) + '<span class="jst-ring-pct">' + pct + '%</span></div>' +
+          '<svg class="jst-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+        '</div>' +
+        '<div class="jst-module-body">' +
+          '<p class="jst-objective">' + m.objective + '</p>' +
+          (m.content.length ? '<p class="jst-section-label">Core content</p>' + m.content.map((t, i) => itemHtml(m.id, 'content', i, t)).join('') : '') +
+          (m.practice.length ? '<p class="jst-section-label">Practice questions</p>' + m.practice.map((t, i) => itemHtml(m.id, 'practice', i, t)).join('') : '') +
+        '</div>';
+
+      modulesEl.appendChild(card);
+    });
+
+    overallCountEl.textContent = overallDone + ' / ' + totalItems;
+    segmentsEl.innerHTML = '';
+    const segCount = 30;
+    const filledSegs = totalItems ? Math.round((overallDone / totalItems) * segCount) : 0;
+    for (let i = 0; i < segCount; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'jst-seg' + (i < filledSegs ? ' filled' : '');
+      segmentsEl.appendChild(seg);
+    }
+
+    gearBtn.classList.toggle('needs-setup', !isConfigured());
+    setupBanner.classList.toggle('show', !isConfigured());
+  }
+
+  modulesEl.addEventListener('click', (e) => {
+    const toggle = e.target.closest('[data-toggle]');
+    if (toggle) {
+      const id = toggle.getAttribute('data-toggle');
+      const m = DATA.find(d => d.id === id);
+      m._open = !m._open;
+      render();
+      return;
+    }
+    const item = e.target.closest('.jst-item');
+    if (item) {
+      const key = item.getAttribute('data-key');
+      progress[key] = !progress[key];
+      const openIds = DATA.filter(d => d._open).map(d => d.id);
+      render();
+      openIds.forEach(id => { const m = DATA.find(d => d.id === id); if (m) m._open = true; });
+      render();
+      scheduleSave();
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (!confirm('Reset all checked progress? This cannot be undone.')) return;
+    progress = {};
+    render();
+    scheduleSave();
+  });
+
+  // --- Settings modal ---
+  function openModal() {
+    document.getElementById('jst-in-owner').value = (config && config.owner) || '';
+    document.getElementById('jst-in-repo').value = (config && config.repo) || '';
+    document.getElementById('jst-in-branch').value = (config && config.branch) || 'main';
+    document.getElementById('jst-in-path').value = (config && config.path) || 'progress.json';
+    document.getElementById('jst-in-token').value = (config && config.token) || '';
+    modalBackdrop.classList.add('show');
+  }
+  function closeModal() { modalBackdrop.classList.remove('show'); }
+
+  gearBtn.addEventListener('click', openModal);
+  modalCancel.addEventListener('click', closeModal);
+  modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+
+  modalSave.addEventListener('click', async () => {
+    const owner = document.getElementById('jst-in-owner').value.trim();
+    const repo = document.getElementById('jst-in-repo').value.trim();
+    const branch = document.getElementById('jst-in-branch').value.trim() || 'main';
+    const path = document.getElementById('jst-in-path').value.trim() || 'progress.json';
+    const token = document.getElementById('jst-in-token').value.trim();
+    if (!owner || !repo || !token) {
+      alert('Username, repo, and token are all required.');
+      return;
+    }
+    saveConfig({ owner, repo, branch, path, token });
+    closeModal();
+    await fetchFromGitHub();
+    render();
+  });
+
+  // --- Init ---
+  async function init() {
+    applyTheme();
+    loadConfig();
+
+    // local fallback first so something shows immediately
+    try {
+      const local = localStorage.getItem(LS_LOCAL_PROGRESS_KEY);
+      if (local) progress = JSON.parse(local);
+    } catch (e) { /* ignore */ }
+
+    DATA[0]._open = true;
+    render();
+
+    if (isConfigured()) {
+      await fetchFromGitHub();
+      render();
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
